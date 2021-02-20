@@ -1,8 +1,10 @@
 {
   "dependencies": {
     "express": "4.17.1",
+    "jsdom": "^16.4.0",
     "mkdirp": "1.0.4",
     "morgan": "1.10.0",
+    "node-fetch": "^2.6.1",
     "rotating-file-stream": "2.1.5"
   }
 }
