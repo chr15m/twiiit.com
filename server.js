@@ -23,7 +23,12 @@ function serve() {
 
   app.get("/*", (req, res) => {
     // pick a random nitter instance and redirect
-    res.redirect("https://nitter.net" + req.path);
+    const instance = instances[Math.floor(Math.random() * instances.length)];
+    if (instance) {
+      res.redirect(instance + req.path);
+    } else {
+      res.status(421).header("Content-type", "text/plain").send("Sorry, we couldn't find a working nitter instance.");
+    }
   });
 
   app.listen(port, () => console.log("Twiiit app listening on port " + port + "."));
@@ -63,12 +68,12 @@ function fetch_server_list() {
             const a = fields[1].querySelector("a");
             if (a) {
               const href = a.getAttribute("href")
-              urls.push(href.replace(/\/+$/, "") + "/");
+              urls.push(href.replace(/\/+$/, ""));
             }
           }
         });
       }
-      urls.push("https://nitter.net/");
+      urls.push("https://nitter.net");
       res(urls);
     })
     .catch(function(error) {
@@ -83,7 +88,7 @@ function test_server_list(urls) {
   // test each one for overload
   return Promise.all(urls.map(function(url) {
     return new Promise(function(res, err) {
-      fetch(url + "jack").then(function(response) {
+      fetch(url + "/jack").then(function(response) {
         if (response.ok) {
           return response.text();
         } else {
@@ -120,6 +125,5 @@ function maintain_instance_list() {
   });
 }
 
-// serve();
-// fetch_server_list().then(test_server_list).then(filter_failing_urls).then(console.log);
+serve();
 maintain_instance_list();
