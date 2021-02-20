@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "express": "4.17.1",
+    "mkdirp": "1.0.4",
+    "morgan": "1.10.0",
+    "rotating-file-stream": "2.1.5"
+  }
+}
