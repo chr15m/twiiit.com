@@ -4,10 +4,18 @@ const rfs = require("rotating-file-stream");
 const mkdirp = require("mkdirp");
 const fetch = require("node-fetch");
 const jsdom = require("jsdom");
+const m = require("motionless");
 
 const nitterlist_url = "https://github.com/zedeus/nitter/wiki/Instances";
 const instances = [];
 const check_interval = 1000 * 60 * 5;
+
+function index() {
+  const template = m.dom(m.load("index.html"));
+  const content = m.md(m.load("README.md"));
+  template.$("main").innerHTML = content;
+  return template.render();
+}
 
 function serve() {
   const app = express();
@@ -19,7 +27,13 @@ function serve() {
 
   const accesslog = rfs.createStream("access.log", {"interval": "1d", "path": logs, "compress": "gzip"});
 
+  const staticsite = index();
+
   app.use(morgan("combined", {"stream": accesslog}));
+
+  app.get("/", (req, res) => {
+    res.send(staticsite);
+  });
 
   app.get("/*", (req, res) => {
     // pick a random nitter instance and redirect
@@ -27,7 +41,7 @@ function serve() {
     if (instance) {
       res.redirect(instance + req.path);
     } else {
-      res.status(421).header("Content-type", "text/plain").send("Sorry, we couldn't find a working nitter instance.");
+      res.status(421).header("Content-type", "text/plain").send("Sorry, couldn't find a Nitter instance.");
     }
   });
 
@@ -119,7 +133,7 @@ function maintain_instance_list() {
     if (urls.length) {
       instances.length = 0;
       urls.forEach(url=>instances.push(url));
-      console.log("Instances:", instances);
+      console.log(instances.length, "instances available");
     }
     setTimeout(maintain_instance_list, check_interval);
   });

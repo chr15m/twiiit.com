@@ -4,6 +4,7 @@
     "jsdom": "^16.4.0",
     "mkdirp": "1.0.4",
     "morgan": "1.10.0",
+    "motionless": "0.0.4",
     "node-fetch": "^2.6.1",
     "rotating-file-stream": "2.1.5"
   }
