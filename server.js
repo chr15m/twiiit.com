@@ -6,7 +6,8 @@ const fetch = require("node-fetch");
 const jsdom = require("jsdom");
 
 const nitterlist_url = "https://github.com/zedeus/nitter/wiki/Instances";
-const servers = {};
+const instances = [];
+const check_interval = 1000 * 60 * 5;
 
 function serve() {
   const app = express();
@@ -31,7 +32,14 @@ function serve() {
 function fetch_server_list() {
   return new Promise(function(res, err) {
     // download the list of nitter instances
-    fetch(nitterlist_url).then(r=>r.text()).then(function(page) {
+    fetch(nitterlist_url)
+      .then(function(response) {
+        if (response.ok) {
+          return response.text();
+        } else {
+          res([]);
+        }
+      }).then(function(page) {
       const dom = new jsdom.JSDOM(page);
       const tables = dom.window.document.querySelectorAll("a#user-content-list-of-public-nitter-instances,table");
       const urls = [];
@@ -62,7 +70,11 @@ function fetch_server_list() {
       }
       urls.push("https://nitter.net/");
       res(urls);
-    }).catch(err);
+    })
+    .catch(function(error) {
+      console.error(error);
+      res([]);
+    });
   });
 }
 
@@ -71,14 +83,23 @@ function test_server_list(urls) {
   // test each one for overload
   return Promise.all(urls.map(function(url) {
     return new Promise(function(res, err) {
-      fetch(url + "jack").then(r=>r.text()).then(function(page) {
+      fetch(url + "jack").then(function(response) {
+        if (response.ok) {
+          return response.text();
+        } else {
+          res(null);
+        }
+      }).then(function(page) {
         //console.log(url, page.indexOf("error-panel"));
-        if (page.indexOf("error-panel") == -1 && page.indexOf("rate limited") == -1) {
+        if (page) {
           res(url);
         } else {
           res(null);
         }
-      }).catch(console.error);
+      }).catch(function(error) {
+        console.error(error);
+        res(null);
+      });
     });
   }));
 }
@@ -87,5 +108,18 @@ function filter_failing_urls(urls) {
   return urls.filter(t=>t);
 }
 
+function maintain_instance_list() {
+  fetch_server_list().then(test_server_list).then(filter_failing_urls).then(function(urls) {
+    // if we got any valid urls, replace our current set
+    if (urls.length) {
+      instances.length = 0;
+      urls.forEach(url=>instances.push(url));
+      console.log("Instances:", instances);
+    }
+    setTimeout(maintain_instance_list, check_interval);
+  });
+}
+
 // serve();
-fetch_server_list().then(test_server_list).then(filter_failing_urls).then(console.log);
+// fetch_server_list().then(test_server_list).then(filter_failing_urls).then(console.log);
+maintain_instance_list();
