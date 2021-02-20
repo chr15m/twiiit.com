@@ -34,9 +34,9 @@ function fetch_server_list() {
     fetch(nitterlist_url).then(r=>r.text()).then(function(page) {
       const dom = new jsdom.JSDOM(page);
       const tables = dom.window.document.querySelectorAll("a#user-content-list-of-public-nitter-instances,table");
+      const urls = [];
       let found = false;
       let table = null;
-      let urls = [];
       for (e=0; e<tables.length; e++) {
         const el = tables[e];
         if (found) {
@@ -54,19 +54,38 @@ function fetch_server_list() {
             //console.log(fields[0].innerHTML, fields[1].innerHTML);
             const a = fields[1].querySelector("a");
             if (a) {
-              urls.push(a.getAttribute("href"));
+              const href = a.getAttribute("href")
+              urls.push(href.replace(/\/+$/, "") + "/");
             }
           }
         });
       }
+      urls.push("https://nitter.net/");
       res(urls);
     }).catch(err);
   });
 }
 
 function test_server_list(urls) {
+  //console.log("here", urls);
   // test each one for overload
+  return Promise.all(urls.map(function(url) {
+    return new Promise(function(res, err) {
+      fetch(url + "jack").then(r=>r.text()).then(function(page) {
+        //console.log(url, page.indexOf("error-panel"));
+        if (page.indexOf("error-panel") == -1 && page.indexOf("rate limited") == -1) {
+          res(url);
+        } else {
+          res(null);
+        }
+      }).catch(console.error);
+    });
+  }));
+}
+
+function filter_failing_urls(urls) {
+  return urls.filter(t=>t);
 }
 
 // serve();
-fetch_server_list().then(console.log);
+fetch_server_list().then(test_server_list).then(filter_failing_urls).then(console.log);
