@@ -19,11 +19,13 @@ You can append any valid Twitter/Nitter URL to this page to be redirected. For e
 
  * [/mccrmx](/mccrmx) will redirect you to my profile.
  * [/mccrmx/rss](/mccrmx/rss) will redirect you to the RSS feed for my profile.
- * [/mccrmx/status/1023194275540946944](/mccrmx/status/1023194275540946944) will redirect you to a specific tweet.
+ * [/mccrmx/status/1363062307505405958](/mccrmx/status/1363062307505405958) will redirect you to a specific tweet.
 
 <footer>
 
 Made by <a href="https://twitter.com/mccrmx">Chris McCormick</a>.
+
+[Source code on GitHub](https://github.com/chr15m/twiiit.com).
 
 <a href="https://bugout.network/">bugout.network</a>
 
