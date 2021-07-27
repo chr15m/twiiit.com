@@ -1,3 +1,4 @@
+const util = require("util");
 const express = require("express");
 const morgan = require("morgan");
 const rfs = require("rotating-file-stream");
@@ -26,6 +27,18 @@ function serve() {
   mkdirp(logs);
 
   const accesslog = rfs.createStream("access.log", {"interval": "1d", "path": logs, "compress": "gzip"});
+
+  // set up error logging
+  const errorlog = rfs.createStream("error.log", {"interval": "7d", "path": logs, "compress": "gzip"});
+  const stdout = process.stdout;
+  function logfn(...args) {
+    const date = (new Date()).toISOString().replace(/\..*/, "").split("T");
+    const out = date.join(" ") + " " + util.format.apply(null, args) + "\n";
+    stdout.write(out);
+    errorlog.write(out);
+  }
+  console.log = logfn;
+  console.error = logfn;
 
   const staticsite = index();
 
