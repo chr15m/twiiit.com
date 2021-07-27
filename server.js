@@ -141,6 +141,7 @@ function filter_failing_urls(urls) {
 }
 
 function maintain_instance_list() {
+  console.log("maintain_instance_list started");
   fetch_server_list().then(test_server_list).then(filter_failing_urls).then(function(urls) {
     // if we got any valid urls, replace our current set
     if (urls.length) {
