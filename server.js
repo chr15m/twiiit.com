@@ -75,24 +75,16 @@ function fetch_server_list() {
       const dom = new jsdom.JSDOM(page);
       const tables = dom.window.document.querySelectorAll("a#user-content-list-of-public-nitter-instances,table");
       const urls = [];
-      let found = false;
-      let table = null;
-      for (e=0; e<tables.length; e++) {
-        const el = tables[e];
-        if (found) {
-          table = tables[e];
-          break;
-        }
-        if (el.id == "user-content-list-of-public-nitter-instances") {
-          found = true;
-        }
-      }
+      // just use the second table on the page
+      let table = tables[1];
       if (table) {
         table.querySelectorAll("tr").forEach(function(row) {
+          //console.log("row", row);
           const fields = Array.from(row.querySelectorAll("td"));
-          if (fields[0] && fields[1] && fields[0].innerHTML.indexOf("✅") != -1) {
+          //console.log("fields", fields.map(f=>f.innerHTML));
+          if (fields[0] && fields[1] && fields[1].innerHTML.indexOf("✅") != -1) {
             //console.log(fields[0].innerHTML, fields[1].innerHTML);
-            const a = fields[1].querySelector("a");
+            const a = fields[0].querySelector("a");
             if (a) {
               const href = a.getAttribute("href")
               urls.push(href.replace(/\/+$/, ""));
@@ -148,6 +140,8 @@ function maintain_instance_list() {
       instances.length = 0;
       urls.forEach(url=>instances.push(url));
       console.log(instances.length, "instances available");
+    } else {
+      console.log("No valid URLs, keeping current URL set (" + instances.length + ").");
     }
     setTimeout(maintain_instance_list, check_interval);
   });
