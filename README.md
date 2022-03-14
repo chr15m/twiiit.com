@@ -4,7 +4,12 @@
 
 Enter a Twitter username and press "go" to be redirected to a nitter instance serving that profile.
 
-<input id="username" placeholder="username"/><button onclick="document.location.href=username.value">go</button>
+<input id="username" placeholder="username"/>
+<button id="go">go</button>
+<script>
+  go.onclick=function(ev) { document.location.href = username.value; };
+  username.onkeydown=function(ev) { if (ev.keyCode == 13) go.click(); };
+</script>
 
 [Nitter](https://nitter.net/) is an alternative frontend for Twitter.
 There are many [public nitter instances](https://github.com/zedeus/nitter/wiki/Instances) which have varying levels of uptime.
