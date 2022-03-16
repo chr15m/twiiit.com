@@ -63,9 +63,15 @@ function serve() {
 
   app.use(morgan("combined", {"stream": accesslog}));
 
-  app.get("/", (req, res) => {
-    res.send(staticsite);
-  });
+  if (process.env["DEV"]) {
+    app.get("/", (req, res) => {
+      res.send(index());
+    });
+  } else {
+    app.get("/", (req, res) => {
+      res.send(staticsite);
+    });
+  }
 
   app.get("/*", (req, res) => {
     // pick a random nitter instance and redirect
