@@ -24,6 +24,18 @@
   </head>
   <body>
     <main>
+      <p>Enter a Twitter username and press "go" to be redirected to a nitter instance serving that profile.</p>
+      <input id="username" placeholder="username"/>
+      <button id="go">go</button>
+      <script>
+        go.onclick=function(ev) { document.location.href = username.value; };
+        username.onkeydown=function(ev) { if (ev.keyCode == 13) go.click(); };
+      </script>
     </main>
+    <footer>
+      <p>Made by <a href="https://twitter.com/mccrmx">Chris McCormick</a>.</p>
+      <p><a href="https://github.com/chr15m/twiiit.com">Source code on GitHub</a>.</p>
+      <p><a href="https://bugout.network/">bugout.network</a></p>
+    </footer>
   </body>
 </html>

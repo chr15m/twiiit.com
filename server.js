@@ -14,8 +14,10 @@ const check_interval = 1000 * 60 * 5;
 
 function index() {
   const template = m.dom(m.load("index.html"));
-  const content = m.md(m.load("README.md"));
+  const ui = template.$("main").innerHTML;
+  const content = m.md(m.load("README.md").replace("<!-- ui goes here -->", "<div id='ui'></div>"));
   template.$("main").innerHTML = content;
+  template.$("#ui").innerHTML = ui;
   return template.render();
 }
 
