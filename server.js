@@ -1,3 +1,4 @@
+const fs = require("fs");
 const util = require("util");
 const express = require("express");
 const morgan = require("morgan");
@@ -16,6 +17,22 @@ function index() {
   const content = m.md(m.load("README.md"));
   template.$("main").innerHTML = content;
   return template.render();
+}
+
+function load_initial_data() {
+  fs.readFile("instances.json", (err, data) => {
+    if (err) {
+      console.log("Couldn't read instances from file.");
+    } else if (data) {
+      try {
+        const stored_instances = JSON.parse(data.toString()) || [];
+        stored_instances.forEach(url=>instances.push(url));
+        console.log("Loaded " + stored_instances.length + " instances.");
+      } catch {
+        console.log("Couldn't parse instances from file.");
+      }
+    }
+  });
 }
 
 function serve() {
@@ -139,6 +156,7 @@ function maintain_instance_list() {
     if (urls.length) {
       instances.length = 0;
       urls.forEach(url=>instances.push(url));
+      fs.writeFile("instances.json", JSON.stringify(urls), (err) => { if (err) console.error(err); });
       console.log(instances.length, "instances available");
     } else {
       console.log("No valid URLs, keeping current URL set (" + instances.length + ").");
@@ -147,5 +165,6 @@ function maintain_instance_list() {
   });
 }
 
+load_initial_data();
 serve();
 maintain_instance_list();
