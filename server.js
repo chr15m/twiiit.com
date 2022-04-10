@@ -127,6 +127,11 @@ function fetch_server_list() {
   });
 }
 
+function check_for_error(page, error) {
+  //console.log("Checking", error, page.indexOf(error) == -1);
+  return page.indexOf(error) == -1;
+}
+
 function test_server_list(urls) {
   //console.log("here", urls);
   // test each one for overload
@@ -140,7 +145,8 @@ function test_server_list(urls) {
         }
       }).then(function(page) {
         //console.log(url, page.indexOf("error-panel"));
-        if (page) {
+        //console.log(url);
+        if (page && check_for_error(page, "error-panel") && (check_for_error(page, "timeline-none") || check_for_error(page, "No items found"))) {
           res(url);
         } else {
           res(null);
