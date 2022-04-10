@@ -127,8 +127,21 @@ function fetch_server_list() {
   });
 }
 
+// https://dmitripavlutin.com/timeout-fetch-request/
+async function fetch_with_timeout(resource, options = {}) {
+  const { timeout = 15000 } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  const response = await fetch(resource, {
+    ...options,
+    signal: controller.signal
+  });
+  clearTimeout(id);
+  return response;
+}
+
 function check_for_error(page, error) {
-  //console.log("Checking", error, page.indexOf(error) == -1);
+  console.log("Checking", error, page.indexOf(error) == -1);
   return page.indexOf(error) == -1;
 }
 
@@ -137,12 +150,16 @@ function test_server_list(urls) {
   // test each one for overload
   return Promise.all(urls.map(function(url) {
     return new Promise(function(res, err) {
-      fetch(url + "/jack").then(function(response) {
+      // if server times out after 15 seconds an abort will be thrown and server ignored
+      fetch_with_timeout(url + "/jack").then(function(response) {
         if (response.ok) {
           return response.text();
         } else {
           res(null);
         }
+      }).catch(function(error) {
+        console.error(error);
+        res(null);
       }).then(function(page) {
         //console.log(url, page.indexOf("error-panel"));
         //console.log(url);
@@ -151,9 +168,6 @@ function test_server_list(urls) {
         } else {
           res(null);
         }
-      }).catch(function(error) {
-        console.error(error);
-        res(null);
       });
     });
   }));
