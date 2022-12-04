@@ -141,7 +141,7 @@ async function fetch_with_timeout(resource, options = {}) {
 }
 
 function check_for_error(page, error) {
-  console.log("Checking", error, page.indexOf(error) == -1);
+  //console.log("Checking", error, page.indexOf(error) == -1);
   return page.indexOf(error) == -1;
 }
 
@@ -196,3 +196,6 @@ function maintain_instance_list() {
 load_initial_data();
 serve();
 maintain_instance_list();
+// restart once per day ugh
+// this is to work around persistent issues with the tasks stopping running
+setTimeout(function() { console.log("Daily restart."); process.exit(0); }, 1000 * 60 * 60 * 24);
