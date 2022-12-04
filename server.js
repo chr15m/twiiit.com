@@ -77,7 +77,7 @@ function serve() {
     // pick a random nitter instance and redirect
     const instance = instances[Math.floor(Math.random() * instances.length)];
     if (instance) {
-      res.redirect(instance + req.path);
+      res.redirect(instance + req.originalUrl);
     } else {
       res.status(421).header("Content-type", "text/plain").send("Sorry, couldn't find a Nitter instance.");
     }
