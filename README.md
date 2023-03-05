@@ -34,6 +34,7 @@ Digital Ocean staff may also be able to access the machine as per this answer on
 
 > Do you keep logs of queries and IP addresses where they are coming from and going to?
 
+IP addresses are not logged.
 Access logs are stored on the server in NCSA combined log format with the IP address replaced with `127.0.0.1` due to proxying.
 All requested URLs are written to the log file, and also the useragent string.
 The earliest logfile currently on the server is dated 2021-02-21.
