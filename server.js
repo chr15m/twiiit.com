@@ -1,4 +1,5 @@
 const fs = require("fs");
+const process = require("process");
 const util = require("util");
 const express = require("express");
 const morgan = require("morgan");
@@ -193,9 +194,14 @@ function maintain_instance_list() {
   });
 }
 
-load_initial_data();
-serve();
-maintain_instance_list();
-// restart once per day ugh
-// this is to work around persistent issues with the tasks stopping running
-setTimeout(function() { console.log("Daily restart."); process.exit(0); }, 1000 * 60 * 60 * 24);
+if (process.argv.includes("--test-site-checker")) {
+  console.log("Testing instance checker.");
+  fetch_server_list().then(test_server_list).then(filter_failing_urls).then(console.log);
+} else {
+  load_initial_data();
+  serve();
+  maintain_instance_list();
+  // restart once per day ugh
+  // this is to work around persistent issues with the tasks stopping running
+  setTimeout(function() { console.log("Daily restart."); process.exit(0); }, 1000 * 60 * 60 * 24);
+}
