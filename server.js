@@ -164,7 +164,10 @@ function test_server_list(urls) {
       }).then(function(page) {
         //console.log(url, page.indexOf("error-panel"));
         //console.log(url);
-        if (page && check_for_error(page, "error-panel") && (check_for_error(page, "timeline-none") || check_for_error(page, "No items found"))) {
+        const error_check = page && check_for_error(page, "error-panel");
+        const timeline_check = page && (check_for_error(page, "timeline-none") || check_for_error(page, "No items found"));
+        const timeline_item_check = page && !check_for_error(page, "timeline-item");
+        if (page && error_check && timeline_check && timeline_item_check) {
           res(url);
         } else {
           res(null);
