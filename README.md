@@ -4,6 +4,8 @@
 
 <!-- ui goes here -->
 
+There are currently <!-- instances --> instances online.
+
 [Nitter](https://nitter.net/) is an alternative frontend for Twitter.
 There are many [public nitter instances](https://github.com/zedeus/nitter/wiki/Instances) which have varying levels of uptime.
 Some instances are rate limited, presumably due to high demand.

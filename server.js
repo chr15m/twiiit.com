@@ -16,8 +16,12 @@ const check_interval = 1000 * 60 * 5;
 function index() {
   const template = m.dom(m.load("index.html"));
   const ui = template.$("main").innerHTML;
-  const content = m.md(m.load("README.md").replace("<!-- ui goes here -->", "<div id='ui'></div>"));
-  template.$("main").innerHTML = content;
+  const readme = m.load("README.md");
+  const content = readme
+    .replace("<!-- ui goes here -->", "<div id='ui'></div>")
+    .replace("<!-- instances -->", instances.length);
+  const dynamic = m.md(content);
+  template.$("main").innerHTML = dynamic;
   template.$("#ui").innerHTML = ui;
   return template.render();
 }
@@ -60,19 +64,11 @@ function serve() {
   console.log = logfn;
   console.error = logfn;
 
-  const staticsite = index();
-
   app.use(morgan("combined", {"stream": accesslog}));
 
-  if (process.env["DEV"]) {
-    app.get("/", (req, res) => {
-      res.send(index());
-    });
-  } else {
-    app.get("/", (req, res) => {
-      res.send(staticsite);
-    });
-  }
+  app.get("/", (req, res) => {
+    res.send(index());
+  });
 
   app.get("/*", (req, res) => {
     // pick a random nitter instance and redirect
