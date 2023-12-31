@@ -89,8 +89,10 @@ function fetch_server_list() {
     fetch(nitterlist_url)
       .then(function(response) {
         if (response.ok) {
+          console.log("Nitter Wiki list fetch ok.");
           return response.text();
         } else {
+          console.log("Nitter Wiki list fetch failed.");
           res([]);
         }
       }).then(function(page) {
@@ -114,6 +116,7 @@ function fetch_server_list() {
           }
         });
       }
+      console.log("Nitter Wiki list: " + urls.length + " urls.");
       urls.push("https://nitter.net");
       res(urls);
     })
@@ -152,6 +155,7 @@ function test_server_list(urls) {
         if (response.ok) {
           return response.text();
         } else {
+          console.log(url + "/jack failed to load.");
           res(null);
         }
       }).catch(function(error) {
@@ -166,6 +170,7 @@ function test_server_list(urls) {
         if (page && error_check && timeline_check && timeline_item_check) {
           res(url);
         } else {
+          console.log(url + " did not pass error checks.");
           res(null);
         }
       });
@@ -178,7 +183,8 @@ function filter_failing_urls(urls) {
 }
 
 function maintain_instance_list() {
-  console.log("maintain_instance_list started");
+  console.log(new Date());
+  console.log("maintain_instance_list started.");
   fetch_server_list().then(test_server_list).then(filter_failing_urls).then(function(urls) {
     // if we got any valid urls, replace our current set
     if (urls.length) {
