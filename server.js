@@ -10,6 +10,7 @@ const jsdom = require("jsdom");
 const m = require("motionless");
 
 const nitterlist_url = "https://github.com/zedeus/nitter/wiki/Instances";
+const re_hostname = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
 const instances = [];
 const check_interval = 1000 * 60 * 5;
 
@@ -85,6 +86,14 @@ function serve() {
 
 function fetch_server_list() {
   return new Promise(function(res, err) {
+    // testing from a file
+    /*fs.promises.readFile("instances.html")
+      .then(function(f) {
+        return {
+          ok: true,
+          text: function() { return f.toString(); }
+        };
+      })*/
     // download the list of nitter instances
     fetch(nitterlist_url)
       .then(function(response) {
@@ -97,12 +106,12 @@ function fetch_server_list() {
         }
       }).then(function(page) {
       const dom = new jsdom.JSDOM(page);
-      const tables = dom.window.document.querySelectorAll("a#user-content-third-party-nitter-services,table");
+      const tables = dom.window.document.querySelectorAll("a#user-public,table");
+      const trs = Array.from(dom.window.document.querySelectorAll("table tbody tr"));
+      const trs_filtered = trs.filter(tr=>re_hostname.test(tr.querySelector("td").textContent));
       const urls = [];
-      // just use the second table on the page
-      let table = tables[1];
-      if (table) {
-        table.querySelectorAll("tr").forEach(function(row) {
+      if (trs_filtered.length) {
+        trs_filtered.forEach(function(row) {
           //console.log("row", row);
           const fields = Array.from(row.querySelectorAll("td"));
           //console.log("fields", fields.map(f=>f.innerHTML));
