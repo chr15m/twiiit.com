@@ -10,5 +10,8 @@
   },
   "devDependencies": {
     "jshint": "^2.13.6"
+  },
+  "scripts": {
+    "lint": "npx jshint server.js"
   }
 }
