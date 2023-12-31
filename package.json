@@ -7,5 +7,8 @@
     "motionless": "0.0.4",
     "node-fetch": "^2.6.1",
     "rotating-file-stream": "2.1.5"
+  },
+  "devDependencies": {
+    "jshint": "^2.13.6"
   }
 }
