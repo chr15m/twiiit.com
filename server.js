@@ -35,7 +35,7 @@ function load_initial_data() {
         const stored_instances = JSON.parse(data.toString()) || [];
         stored_instances.forEach(url=>instances.push(url));
         console.log("Loaded " + stored_instances.length + " instances.");
-      } catch {
+      } catch (error) {
         console.log("Couldn't parse instances from file.");
       }
     }
@@ -45,7 +45,7 @@ function load_initial_data() {
 function serve() {
   const app = express();
 
-  const port = process.env["PORT"] || 8000;
+  const port = process.env.PORT || 8000;
 
   const logs = __dirname + "/logs";
   mkdirp(logs);
@@ -110,7 +110,7 @@ function fetch_server_list() {
             //console.log(fields[0].innerHTML, fields[1].innerHTML);
             const a = fields[0].querySelector("a");
             if (a) {
-              const href = a.getAttribute("href")
+              const href = a.getAttribute("href");
               urls.push(href.replace(/\/+$/, ""));
             }
           }
