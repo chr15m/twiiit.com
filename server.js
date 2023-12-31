@@ -97,7 +97,7 @@ function fetch_server_list() {
         }
       }).then(function(page) {
       const dom = new jsdom.JSDOM(page);
-      const tables = dom.window.document.querySelectorAll("a#user-content-list-of-public-nitter-instances,table");
+      const tables = dom.window.document.querySelectorAll("a#user-content-third-party-nitter-services,table");
       const urls = [];
       // just use the second table on the page
       let table = tables[1];
