@@ -53,4 +53,4 @@ Here is an example of a request in the log file:
 Yes. When somebody uses the site their IP is visible to the service.
 Once they are redirected to one of the Nitter instances their IP is visible to that particular instance.
 
-You can use Tor or a VPS to obfuscate your IP address and useragent.
+You can use Tor or a VPN to obfuscate your IP address and useragent.
