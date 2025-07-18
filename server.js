@@ -106,7 +106,6 @@ function fetch_server_list() {
         }
       }).then(function(page) {
       const dom = new jsdom.JSDOM(page);
-      const tables = dom.window.document.querySelectorAll("a#user-public,table");
       const trs = Array.from(dom.window.document.querySelectorAll("table tbody tr"));
       const trs_filtered = trs.filter(tr=>re_hostname.test(tr.querySelector("td").textContent));
       const urls = [];
