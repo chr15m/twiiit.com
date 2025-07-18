@@ -173,12 +173,13 @@ function test_server_list(urls) {
         //console.log(url, page.indexOf("error-panel"));
         //console.log(url);
         const error_check = page && check_for_error(page, "error-panel");
-        const timeline_check = page && (check_for_error(page, "timeline-none") || check_for_error(page, "No items found"));
+        const timeline_empty_check = page && (check_for_error(page, "timeline-none") || check_for_error(page, "No items found"));
         const timeline_item_check = page && !check_for_error(page, "timeline-item");
-        if (page && error_check && timeline_check && timeline_item_check) {
+        if (page && error_check && timeline_empty_check && timeline_item_check) {
           res(url);
         } else {
-          console.log(url + " did not pass error checks.");
+          const reason = !page ? "no_page" : !error_check ? "error_check" : !timeline_empty_check ? "timeline_empty_check" : "timeline_item_check";
+          console.log(url + " did not pass error checks: " + reason);
           res(null);
         }
       });
