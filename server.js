@@ -11,8 +11,9 @@ const m = require("motionless");
 
 const nitterlist_url = "https://github.com/zedeus/nitter/wiki/Instances";
 const re_hostname = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
+const backoff_times = [5, 5, 10, 10, 20, 20, 60, 60, 120, 120, 360, 360, 720, 720, 1440, 1440, 2880, 2880];
 const instances = [];
-const check_interval = 1000 * 60 * 5;
+const check_interval = 1000 * 60 * 1;
 const fetch_timeout = 30000;
 
 function index() {
@@ -21,7 +22,7 @@ function index() {
   const readme = m.load("README.md");
   const content = readme
     .replace("<!-- ui goes here -->", "<div id='ui'></div>")
-    .replace("<!-- instances -->", instances.length);
+    .replace("<!-- instances -->", instances.filter(i => i.seen).length);
   const dynamic = m.md(content);
   template.$("main").innerHTML = dynamic;
   template.$("#ui").innerHTML = ui;
@@ -35,8 +36,14 @@ function load_initial_data() {
     } else if (data) {
       try {
         const stored_instances = JSON.parse(data.toString()) || [];
-        stored_instances.forEach(url=>instances.push(url));
-        console.log("Loaded " + stored_instances.length + " instances.");
+        stored_instances.forEach(inst => {
+          if (typeof inst === "string") {
+            instances.push({url: inst, seen: {t: Date.now(), backoff: 0}, backoff: {index: 0, last: 0}});
+          } else {
+            instances.push(inst);
+          }
+        });
+        console.log("Loaded " + instances.length + " instances.");
       } catch (error) {
         console.log("Couldn't parse instances from file.");
       }
@@ -74,9 +81,10 @@ function serve() {
 
   app.get("/*", (req, res) => {
     // pick a random nitter instance and redirect
-    const instance = instances[Math.floor(Math.random() * instances.length)];
+    const healthy_instances = instances.filter(i => i.seen);
+    const instance = healthy_instances[Math.floor(Math.random() * healthy_instances.length)];
     if (instance) {
-      res.redirect(instance + req.originalUrl);
+      res.redirect(instance.url + req.originalUrl);
     } else {
       res.status(421).header("Content-type", "text/plain").send("Sorry, couldn't find a Nitter instance.");
     }
@@ -154,57 +162,71 @@ function check_for_error(page, error) {
   return page.indexOf(error) == -1;
 }
 
-function test_server_list(urls) {
-  //console.log("here", urls);
+function test_server_list(instances_to_test) {
   // test each one for overload
-  return Promise.all(urls.map(function(url) {
+  return Promise.all(instances_to_test.map(function(instance) {
     return new Promise(function(res, err) {
-      // if server times out after 15 seconds an abort will be thrown and server ignored
-      fetch_with_timeout(url + "/jack").then(function(response) {
+      fetch_with_timeout(instance.url + "/jack").then(function(response) {
         if (response.ok) {
           return response.text();
         } else {
-          console.log(url + "/jack failed to load.");
-          res(null);
+          console.log(instance.url + "/jack failed to load.");
+          return null;
         }
       }).catch(function(error) {
         console.error(error);
-        res(null);
+        return null;
       }).then(function(page) {
-        //console.log(url, page.indexOf("error-panel"));
-        //console.log(url);
         const error_check = page && check_for_error(page, "error-panel");
         const timeline_empty_check = page && (check_for_error(page, "timeline-none") || check_for_error(page, "No items found"));
         const timeline_item_check = page && !check_for_error(page, "timeline-item");
         if (page && error_check && timeline_empty_check && timeline_item_check) {
-          res(url);
+          if (!instance.seen) console.log(instance.url + " is back online.");
+          instance.seen = {t: Date.now(), backoff: instance.backoff.index};
+          instance.backoff.last = Date.now();
         } else {
           const reason = !page ? "no_page" : !error_check ? "error_check" : !timeline_empty_check ? "timeline_empty_check" : "timeline_item_check";
-          console.log(url + " did not pass error checks: " + reason);
-          res(null);
+          const old_backoff_minutes = backoff_times[instance.backoff.index];
+          instance.backoff.index = Math.min(instance.backoff.index + 1, backoff_times.length - 1);
+          const new_backoff_minutes = backoff_times[instance.backoff.index];
+          if (instance.seen) {
+            console.log(instance.url + " did not pass error checks: " + reason + ". Backing off from " + old_backoff_minutes + " to " + new_backoff_minutes + " minutes.");
+          }
+          instance.seen = null;
+          instance.backoff.last = Date.now();
         }
+        res(instance);
       });
     });
   }));
 }
 
-function filter_failing_urls(urls) {
-  return urls.filter(t=>t);
-}
-
 function maintain_instance_list() {
   console.log(new Date());
   console.log("maintain_instance_list started.");
-  fetch_server_list().then(test_server_list).then(filter_failing_urls).then(function(urls) {
-    // if we got any valid urls, replace our current set
-    if (urls.length) {
-      instances.length = 0;
-      urls.forEach(url=>instances.push(url));
-      fs.writeFile("instances.json", JSON.stringify(urls), (err) => { if (err) console.error(err); });
-      console.log(instances.length, "instances available");
-    } else {
-      console.log("No valid URLs, keeping current URL set (" + instances.length + ").");
-    }
+  fetch_server_list().then(urls => {
+    urls.forEach(url => {
+      if (!instances.find(i => i.url === url)) {
+        instances.push({url: url, seen: null, backoff: {index: 0, last: 0}});
+      }
+    });
+    const now = Date.now();
+    const to_test = instances.filter(i => {
+      if (!i.backoff.last) return true;
+      const backoff_minutes = backoff_times[i.backoff.index];
+      const backoff_ms = backoff_minutes * 60 * 1000;
+      const due = now > (i.backoff.last + backoff_ms);
+      if (due && i.backoff.index > 0) {
+        console.log(i.url + " backoff period expired (" + backoff_minutes + " mins), retrying.");
+      }
+      return due;
+    });
+    console.log("Testing " + to_test.length + " of " + instances.length + " total instances.");
+    return test_server_list(to_test);
+  }).then(() => {
+    fs.writeFile("instances.json", JSON.stringify(instances, null, 2), (err) => { if (err) console.error(err); });
+    const healthy_count = instances.filter(i => i.seen).length;
+    console.log(healthy_count, "instances available");
     setTimeout(maintain_instance_list, check_interval);
   });
 }
