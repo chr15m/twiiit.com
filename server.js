@@ -13,6 +13,7 @@ const nitterlist_url = "https://github.com/zedeus/nitter/wiki/Instances";
 const re_hostname = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
 const instances = [];
 const check_interval = 1000 * 60 * 5;
+const fetch_timeout = 30000;
 
 function index() {
   const template = m.dom(m.load("index.html"));
@@ -137,7 +138,7 @@ function fetch_server_list() {
 
 // https://dmitripavlutin.com/timeout-fetch-request/
 async function fetch_with_timeout(resource, options = {}) {
-  const { timeout = 15000 } = options;
+  const { timeout = fetch_timeout } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   const response = await fetch(resource, {
