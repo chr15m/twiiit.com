@@ -162,6 +162,12 @@ function check_for_error(page, error) {
   return page.indexOf(error) == -1;
 }
 
+function is_cloudflare_page(page) {
+  return page.includes("/cdn-cgi/challenge-platform/") &&
+    page.includes("window._cf_chl_opt") &&
+    page.includes("cRay:");
+}
+
 function test_server_list(instances_to_test) {
   // test each one for overload
   return Promise.all(instances_to_test.map(function(instance) {
@@ -180,7 +186,8 @@ function test_server_list(instances_to_test) {
         const error_check = page && check_for_error(page, "error-panel");
         const timeline_empty_check = page && (check_for_error(page, "timeline-none") || check_for_error(page, "No items found"));
         const timeline_item_check = page && !check_for_error(page, "timeline-item");
-        if (page && error_check && timeline_empty_check && timeline_item_check) {
+        const is_cloudflare = page && is_cloudflare_page(page);
+        if ((page && error_check && timeline_empty_check && timeline_item_check) || is_cloudflare) {
           if (!instance.seen) console.log(instance.url + " is back online.");
           instance.seen = {t: Date.now(), backoff: instance.backoff.index};
           instance.backoff.last = Date.now();
