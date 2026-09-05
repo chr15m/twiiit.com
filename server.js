@@ -1,3 +1,4 @@
+const { URL } = require("url");
 const fs = require("fs");
 const process = require("process");
 const util = require("util");
@@ -15,6 +16,73 @@ const backoff_times = [5, 5, 10, 10, 20, 20, 60, 60, 120, 120, 360, 360, 720, 72
 const instances = [];
 const check_interval = 1000 * 60 * 1;
 const fetch_timeout = 30000;
+const submission_limits = {};
+
+function check_submission_rate(ip) {
+  const now = Date.now();
+  const window_ms = 10 * 60 * 1000;
+  const max_requests = 10;
+  const record = (submission_limits[ip] || []).filter(t => (now - t) < window_ms);
+  if (record.length >= max_requests) {
+    return false;
+  }
+  record.push(now);
+  submission_limits[ip] = record;
+  return true;
+}
+
+function validate_and_normalize_url(raw_url) {
+  if (typeof raw_url !== "string") return null;
+  let parsed;
+  try {
+    parsed = new URL(raw_url.trim());
+  } catch (e) {
+    return null;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return null;
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (!host || host === "localhost" || host.endsWith(".onion") ||
+      host.endsWith(".local")) {
+    return null;
+  }
+  if (!re_hostname.test(host)) {
+    return null;
+  }
+  return parsed.origin;
+}
+
+function handle_submission(req, raw_url) {
+  const ip = req.headers["x-forwarded-for"] ||
+    req.socket.remoteAddress || "unknown";
+  if (!check_submission_rate(ip)) {
+    return;
+  }
+  const clean_url = validate_and_normalize_url(raw_url);
+  if (!clean_url) {
+    return;
+  }
+  if (instances.some(i => i.url === clean_url)) {
+    return;
+  }
+  const candidate = {
+    url: clean_url,
+    seen: null,
+    backoff: {index: 0, last: 0}
+  };
+  test_server_list([candidate]).then(tested => {
+    const passed = tested.find(i => i.url === clean_url && i.seen);
+    if (passed && !instances.some(i => i.url === clean_url)) {
+      instances.push(passed);
+      fs.writeFile("instances.json", JSON.stringify(instances, null, 2),
+        err => { if (err) console.error(err); });
+      console.log("Added new instance via submission:", clean_url);
+    }
+  }).catch(err => {
+    console.error("Error testing submitted instance:", err);
+  });
+}
 
 function index() {
   const template = m.dom(m.load("index.html"));
@@ -76,6 +144,10 @@ function serve() {
   app.use(morgan("combined", {"stream": accesslog}));
 
   app.get("/", (req, res) => {
+    if (req.query.add !== undefined) {
+      handle_submission(req, req.query.add);
+      return res.type("text/plain; charset=utf-8").send("👍");
+    }
     res.send(index());
   });
 
@@ -149,8 +221,12 @@ async function fetch_with_timeout(resource, options = {}) {
   const { timeout = fetch_timeout } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
+  const headers = Object.assign({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  }, options.headers || {});
   const response = await fetch(resource, {
     ...options,
+    headers: headers,
     signal: controller.signal
   });
   clearTimeout(id);
@@ -240,7 +316,15 @@ function maintain_instance_list() {
 
 if (process.argv.includes("--test-site-checker")) {
   console.log("Testing instance checker.");
-  fetch_server_list().then(test_server_list).then(filter_failing_urls).then(console.log);
+  fetch_server_list()
+    .then(urls => urls.map(url => ({
+      url: url,
+      seen: null,
+      backoff: {index: 0, last: 0}
+    })))
+    .then(test_server_list)
+    .then(tested => tested.filter(i => i.seen).map(i => i.url))
+    .then(console.log);
 } else {
   load_initial_data();
   serve();
