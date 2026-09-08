@@ -56,16 +56,21 @@ function validate_and_normalize_url(raw_url) {
 function handle_submission(req, raw_url) {
   const ip = req.headers["x-forwarded-for"] ||
     req.socket.remoteAddress || "unknown";
+  console.log("Submission received:", raw_url, "from IP:", ip);
   if (!check_submission_rate(ip)) {
+    console.log("Submission rejected (rate limited):", ip, raw_url);
     return;
   }
   const clean_url = validate_and_normalize_url(raw_url);
   if (!clean_url) {
+    console.log("Submission rejected (invalid URL):", raw_url);
     return;
   }
   if (instances.some(i => i.url === clean_url)) {
+    console.log("Submission rejected (already exists):", clean_url);
     return;
   }
+  console.log("Testing submitted instance candidate:", clean_url);
   const candidate = {
     url: clean_url,
     seen: null,
@@ -78,6 +83,8 @@ function handle_submission(req, raw_url) {
       fs.writeFile("instances.json", JSON.stringify(instances, null, 2),
         err => { if (err) console.error(err); });
       console.log("Added new instance via submission:", clean_url);
+    } else {
+      console.log("Submitted instance failed health checks:", clean_url);
     }
   }).catch(err => {
     console.error("Error testing submitted instance:", err);
@@ -249,10 +256,10 @@ function test_server_list(instances_to_test) {
   return Promise.all(instances_to_test.map(function(instance) {
     return new Promise(function(res, err) {
       fetch_with_timeout(instance.url + "/jack").then(function(response) {
-        if (response.ok) {
+        if (response.ok || response.status === 403) {
           return response.text();
         } else {
-          console.log(instance.url + "/jack failed to load.");
+          console.log(instance.url + "/jack failed to load (status " + response.status + ").");
           return null;
         }
       }).catch(function(error) {
