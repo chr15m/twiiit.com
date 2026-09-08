@@ -84,7 +84,9 @@ function handle_submission(req, raw_url) {
         err => { if (err) console.error(err); });
       console.log("Added new instance via submission:", clean_url);
     } else {
-      console.log("Submitted instance failed health checks:", clean_url);
+      const candidate_res = tested.find(i => i.url === clean_url);
+      const reason = (candidate_res && candidate_res.last_failure_reason) || "unknown";
+      console.log("Submitted instance failed health checks:", clean_url, "reason:", reason);
     }
   }).catch(err => {
     console.error("Error testing submitted instance:", err);
@@ -276,11 +278,14 @@ function test_server_list(instances_to_test) {
           instance.backoff.last = Date.now();
         } else {
           const reason = !page ? "no_page" : !error_check ? "error_check" : !timeline_empty_check ? "timeline_empty_check" : "timeline_item_check";
+          instance.last_failure_reason = reason;
           const old_backoff_minutes = backoff_times[instance.backoff.index];
           instance.backoff.index = Math.min(instance.backoff.index + 1, backoff_times.length - 1);
           const new_backoff_minutes = backoff_times[instance.backoff.index];
           if (instance.seen) {
             console.log(instance.url + " did not pass error checks: " + reason + ". Backing off from " + old_backoff_minutes + " to " + new_backoff_minutes + " minutes.");
+          } else {
+            console.log(instance.url + " did not pass error checks: " + reason + ".");
           }
           instance.seen = null;
           instance.backoff.last = Date.now();
