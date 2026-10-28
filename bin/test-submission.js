@@ -50,6 +50,31 @@ async function run() {
     stdio: ["ignore", "pipe", "pipe"]
   });
 
+  let serverOutput = "";
+  server.stdout.setEncoding("utf8");
+  server.stdout.on("data", (chunk) => {
+    serverOutput += chunk;
+  });
+
+  function waitForSubmissionResult(timeout_ms = 3000) {
+    const start = Date.now();
+    const result_pattern =
+      /(Testing submitted instance candidate: [^\n\r]+|Submission rejected \([^)]+\): [^\n\r]+)/;
+    return new Promise((resolve, reject) => {
+      function check() {
+        const match = serverOutput.match(result_pattern);
+        if (match) {
+          resolve(match[1]);
+        } else if (Date.now() - start > timeout_ms) {
+          reject(new Error(`Timeout waiting for submission result. Log:\n${serverOutput}`));
+        } else {
+          setTimeout(check, 10);
+        }
+      }
+      check();
+    });
+  }
+
   try {
     server.on("exit", (code) => {
       if (code !== null && code !== 0) {
@@ -60,16 +85,41 @@ async function run() {
     await waitForPort(TEST_PORT);
 
     const cases = [
-      { name: "valid URL candidate", input: "https://shitter.thepixora.com" },
-      { name: "reject localhost", input: "http://localhost:8000" },
-      { name: "reject .onion domain", input: "http://example.onion" },
-      { name: "reject invalid syntax", input: "not-a-url" }
+      {
+        name: "valid URL candidate",
+        input: "https://shitter.thepixora.com",
+        expected:
+          "Testing submitted instance candidate: https://shitter.thepixora.com"
+      },
+      {
+        name: "reject localhost",
+        input: "http://localhost:8000",
+        expected: "Submission rejected (invalid URL): http://localhost:8000"
+      },
+      {
+        name: "reject .onion domain",
+        input: "http://example.onion",
+        expected: "Submission rejected (invalid URL): http://example.onion"
+      },
+      {
+        name: "reject .cf domain",
+        input: "https://example.cf",
+        expected: "Submission rejected (invalid URL): https://example.cf"
+      },
+      {
+        name: "reject invalid syntax",
+        input: "not-a-url",
+        expected: "Submission rejected (invalid URL): not-a-url"
+      }
     ];
 
     for (const tc of cases) {
+      serverOutput = "";
       const res = await testRequest(tc.input);
       assert.strictEqual(res.status, 200, `${tc.name}: expected HTTP 200`);
       assert.strictEqual(res.body, "👍", `${tc.name}: expected 👍 body`);
+      const actual = await waitForSubmissionResult();
+      assert.strictEqual(actual, tc.expected, `${tc.name}: log mismatch`);
       console.log(`PASS: ${tc.name}`);
     }
 
