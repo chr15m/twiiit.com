@@ -136,10 +136,20 @@ function serve() {
   const logs = __dirname + "/logs";
   mkdirp(logs);
 
-  const accesslog = rfs.createStream("access.log", {"interval": "1d", "path": logs, "compress": "gzip"});
+  const accesslog = rfs.createStream("access.log", {
+    "interval": "1d",
+    "initialRotation": true,
+    "path": logs,
+    "compress": "gzip"
+  });
 
   // set up error logging
-  const errorlog = rfs.createStream("error.log", {"interval": "7d", "path": logs, "compress": "gzip"});
+  const errorlog = rfs.createStream("error.log", {
+    "size": "250M",
+    "initialRotation": true,
+    "path": logs,
+    "compress": "gzip"
+  });
   const stdout = process.stdout;
   function logfn(...args) {
     const date = (new Date()).toISOString().replace(/\..*/, "").split("T");
@@ -339,5 +349,5 @@ if (process.argv.includes("--test-site-checker")) {
   maintain_instance_list();
   // restart once per day ugh
   // this is to work around persistent issues with the tasks stopping running
-  setTimeout(function() { console.log("Daily restart."); process.exit(0); }, 1000 * 60 * 60 * 24);
+  setTimeout(function() { console.log("Daily restart."); process.exit(0); }, 1000 * 60 * 60 * 27);
 }
